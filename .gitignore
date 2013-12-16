@@ -2,6 +2,7 @@
 *.slo
 *.lo
 *.o
+*.o.d
 *.obj
 
 # Compiled Dynamic libraries
@@ -14,3 +15,6 @@
 *.la
 *.a
 *.lib
+
+build/
+dist/Debug/
