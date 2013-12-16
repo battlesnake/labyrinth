@@ -9,6 +9,7 @@
 #include <GL/glu.h>
 #include <GL/glut.h>
 #include <math.h>
+#include <unistd.h> 
 #include "types.h"
 #include "matrix.h"
 #include "vector.h"
@@ -39,9 +40,9 @@ CONFIGURATION config = demo_configuration();
  *     platform radius, strut lengths) to calculate the start and end position
  *     of each strut.
  * 
- * For controlling a real system, you only need to configure the structure then
- * hit the solve() method.  config[i].angles will give you the result.  Remember
- * to check config[i].error too though, or config.epsilon().
+ * For controlling a real system, you need to configure the structure before
+ * and after the solve() method.  config[i].angles will give you the solver
+ * result.  Remember to check config[i].error too though, or config.epsilon().
  * 
  * HINT: minimising config.epsilon() by compromising on less important
  * parameters (e.g. platform height from base) is a useful optimisation
@@ -50,6 +51,13 @@ CONFIGURATION config = demo_configuration();
  * WARNING: solve() will not detect struts intersecting each other.  Excessive
  * roll will not behave as it does on screen...
  * 
+ * config.optimise(freedom[], jumpscale, iterations) performs a given number of
+ * iterations of weighted gradient descent, using jumpscale * freedom as the
+ * regularisation vector.  The ideal values for these regularisation parameters
+ * depends on the scale of your model, and the desired output precision.
+ * 
+ * 
+ * This demo requires GL and GLUT, the solver only requires the standard library
  */
 
 /******************************************************************************/
@@ -62,84 +70,141 @@ CONFIGURATION config = demo_configuration();
 const int width = 800, height = 800;
 const float aspect = width * 1.0 / height;
 
-/* Angular acceleration of pitch */
-float omegapitch = 0;
+/* Angular acceleration of yaw (left/right mouse buttons) */
+float yaw_omega = 0;
 
-/* Mouse button mask */
+/* Mouse button mask (for yaw control) */
 int button = 0;
 
-/* Ticks when last frame was drawn */
-clock_t last_ticks = clock();
+/* Run the optimiser? (middle mouse button) */
+bool optimise_solution = true;
+
+/* Rotation of entire model for display purposes ("R" key to toggle) */
+bool model_rotation = true;
+float model_theta = 0;
+
+/* Target frame rate*/
+const float fps_target = 60;
+const float dt_target = 1.0 / fps_target;
+
+/* Frame times for moving average rate calculation */
+#define FRAME_RATE_MOVING_WINDOW_SIZE 6
+clock_t t_frames[FRAME_RATE_MOVING_WINDOW_SIZE];
+int t_frame = 0;
+
+/* Extra delay to reduce frame rate */
+clock_t delay_extra = 0;
 
 void renderScene()
 {
-	/* Timing */
-	double dt = (clock() - last_ticks) * 1.0 / CLOCKS_PER_SEC;
-	last_ticks = clock();
+	/* Timing for animation and rate limiting */
+	const clock_t ticks = clock();
+	const clock_t last_ticks = t_frames[t_frame];
+	t_frames[t_frame] = ticks;
+	t_frame = (t_frame + 1) % FRAME_RATE_MOVING_WINDOW_SIZE;
+	double dt = (ticks - last_ticks) / (1.0 * CLOCKS_PER_SEC * FRAME_RATE_MOVING_WINDOW_SIZE);
+
+	long delayed_target = 0;
+	/* Extra delay or optimisation to keep frame rate low */
+	if (dt < dt_target - 1e-3) {
+		delay_extra = (dt_target - dt) * CLOCKS_PER_SEC;
+	} else if (dt < dt_target + 3e-3) {
+		delay_extra *= 99;
+		delay_extra /= 100;
+	} else {
+		delay_extra *= 90;
+		delay_extra /= 100;
+	}
+	delayed_target = delay_extra + ticks;
+
+	/* Window title */
+	char title[60];
+
 	/* Motor angles */
 	config.solve();
 	config.configure();
-	/* Display epsilon */
-	char title[60];
-	sprintf(title, "Epsilon: %e", config.epsilon());
+	const float error = config.epsilon();
+
+	if (optimise_solution) {
+		/* Optimise */
+		const float freedoms[] = {0.05, 0.001, 0.05, 1, 1, 1};
+		int opt_iterations = 0;
+		const int iterations_per_cycle = 10;
+		do {
+			if (config.optimise(freedoms, 0.05, iterations_per_cycle))
+				break;
+			opt_iterations += iterations_per_cycle;
+		} while (delayed_target && (clock() < delayed_target + ticks));
+		const float err2 = config.epsilon();
+		/* Display epsilons */
+		sprintf(title, "Epsilon = %e, Optimised = %e, Optimisation cycles = %d, Frame rate = %.0f", error, err2, opt_iterations, 1 / dt);
+	} else {
+		/* Display epsilon */
+		sprintf(title, "Epsilon = %e, Frame rate = %.0f", error, 1 / dt);
+	}
+
+	/* Set window title */
 	glutSetWindowTitle(title);
 
-	glMatrixMode(GL_MODELVIEW);
+	/* Rotation */
+	if (model_rotation)
+		model_theta += 45.0 * dt;
+
+	/* Initialise buffers */
 	glClearColor(1, 1, 1, 1);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+	/* Initialise matrices */
+	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
 	glTranslatef(0, -133.212, -1000);
+	glRotatef(model_theta, 0, 1, 0);
 
-	glRotatef(clock() * 45.0 / CLOCKS_PER_SEC, 0, 1, 0);
+	/* Base */
+	glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE, VECTOR(0.8, 0.7, 0.1));
+	glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, VECTOR(1, 1, 1));
+	glMateriali(GL_FRONT_AND_BACK, GL_SHININESS, 90);
+	cylinder(VECTOR(0, -config.base_thickness, 0), VECTOR(0, 0, 0),
+		config.base[0], config.base[1],
+		config.base_polygon == CONFIGURATION::PLATFORM_SHAPE::POLYEDGE ? PI / config.struts : 0,
+		config.base_polygon == CONFIGURATION::PLATFORM_SHAPE::ELLIPSE ? 60 : config.struts);
 
+	/* Platform */
 	glPushMatrix();
-	{
-		/* Base */
-		glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE, VECTOR(0.8, 0.7, 0.1));
-		glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, VECTOR(1, 1, 1));
-		glMateriali(GL_FRONT_AND_BACK, GL_SHININESS, 90);
-		cylinder(VECTOR(0, -config.base_thickness, 0), VECTOR(0, 0, 0),
-			config.base[0], config.base[1],
-			config.base_polygon == CONFIGURATION::PLATFORM_SHAPE::POLYEDGE ? PI / config.struts : 0,
-			config.base_polygon == CONFIGURATION::PLATFORM_SHAPE::ELLIPSE ? 60 : config.struts);
-		/* Platform */
-		glPushMatrix();
-		glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE, VECTOR(0.8, 0.4, 0.3));
-		glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, VECTOR(1, 1, 1));
-		glMateriali(GL_FRONT_AND_BACK, GL_SHININESS, 90);
-		glMultMatrixf(MATRIX::translation(config.platform_displacement));
-		glMultMatrixf(MATRIX::rotation(config.yaw, config.pitch, config.roll));
-		cylinder(VECTOR(0, 0, 0), VECTOR(0, config.platform_thickness, 0),
-			config.platform[0], config.platform[1],
-			config.platform_polygon == CONFIGURATION::PLATFORM_SHAPE::POLYEDGE ? PI / config.struts : 0,
-			config.platform_polygon == CONFIGURATION::PLATFORM_SHAPE::ELLIPSE ? 60 : config.struts);
-		glPopMatrix();
-
-		for (int i = 0; i < config.struts; i++) {
-			/* Strut */
-			glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE, VECTOR(0.2, 0.4, 0.7));
-			glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, VECTOR(1, 1, 1));
-			glMateriali(GL_FRONT_AND_BACK, GL_SHININESS, 10);
-			if (config[i].error != 0)
-				glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, VECTOR(1, 0, 0));
-			strut(
-				config[i].p[0], config[i].p[1], 
-				config[i].base_halfwidth, config[i].base_halfdepth, 
-				config[i].platform_halfwidth, config[i].platform_halfdepth);
-			/* Wheel */
-			glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE, VECTOR(0.2, 0.7, 0.2));
-			glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, VECTOR(1, 1, 1));
-			glMateriali(GL_FRONT_AND_BACK, GL_SHININESS, 80);
-			MATRIX m = MATRIX::rotation(config[i].normal, -config[i].motor_angle);
-			VECTOR u = m * config[i].tangent;
-			VECTOR v = m * VECTOR(0, 0.5, 0);
-			cylinder(config[i].motor_offset, config[i].motor_offset + config[i].normal * config.wheel_thickness, u * config.strut_arm, v * config.strut_arm);
-		}
-
-	}
+	glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE, VECTOR(0.8, 0.4, 0.3));
+	glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, VECTOR(1, 1, 1));
+	glMateriali(GL_FRONT_AND_BACK, GL_SHININESS, 90);
+	glMultMatrixf(MATRIX::translation(config.platform_displacement));
+	glMultMatrixf(MATRIX::rotation(config.pitch, config.yaw, config.roll));
+	cylinder(VECTOR(0, 0, 0), VECTOR(0, config.platform_thickness, 0),
+		config.platform[0], config.platform[1],
+		config.platform_polygon == CONFIGURATION::PLATFORM_SHAPE::POLYEDGE ? PI / config.struts : 0,
+		config.platform_polygon == CONFIGURATION::PLATFORM_SHAPE::ELLIPSE ? 60 : config.struts);
 	glPopMatrix();
 
+	/* Struts and wheels */
+	for (int i = 0; i < config.struts; i++) {
+		/* Strut */
+		glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE, VECTOR(0.2, 0.4, 0.7));
+		glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, VECTOR(1, 1, 1));
+		glMateriali(GL_FRONT_AND_BACK, GL_SHININESS, 10);
+		if (config[i].error != 0)
+			glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, VECTOR(1, 0, 0));
+		strut(
+			config[i].p[0], config[i].p[1],
+			config[i].base_halfwidth, config[i].base_halfdepth,
+			config[i].platform_halfwidth, config[i].platform_halfdepth);
+		/* Wheel */
+		glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE, VECTOR(0.2, 0.7, 0.2));
+		glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, VECTOR(1, 1, 1));
+		glMateriali(GL_FRONT_AND_BACK, GL_SHININESS, 80);
+		MATRIX m = MATRIX::rotation(config[i].normal, -config[i].motor_angle);
+		VECTOR u = m * config[i].tangent;
+		VECTOR v = m * VECTOR(0, 0.5, 0);
+		cylinder(config[i].motor_offset, config[i].motor_offset + config[i].normal * config.wheel_thickness, u * config.strut_arm, v * config.strut_arm);
+	}
+
+	/* Flip buffers */
 	glutSwapBuffers();
 
 	/* Ensure we keep updating */
@@ -147,12 +212,21 @@ void renderScene()
 		glutPostRedisplay();
 	});
 
+	/* Yaw mechanics */
 	if (button & 1)
-		omegapitch += dt * 50;
+		yaw_omega += dt * 50;
 	if (button & 2)
-		omegapitch -= dt * 50;
-	config.pitch += omegapitch * dt;
-	omegapitch *= pow(0.03, dt);
+		yaw_omega -= dt * 50;
+	config.yaw += yaw_omega * dt;
+	yaw_omega *= pow(0.01, dt);
+
+	/* Delay to reduce frame rate */
+	if (delayed_target > clock())
+		usleep((1000000 * (delayed_target - clock())) / CLOCKS_PER_SEC);
+	while (clock() < delayed_target) {
+
+	}
+
 }
 
 void setLights()
@@ -194,7 +268,6 @@ void setCamera()
 {
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
-	//glOrtho(-4 * aspect, 4 * aspect, -2, 6, 0, 100);
 	gluPerspective(25, aspect, 1, 1000000);
 }
 
@@ -214,12 +287,14 @@ void createWindow(int& argc, char** argv)
 
 void mouseMove(int x, int y)
 {
+	/* Roll/pitch in response to cursor position */
 	config.roll = PI / 4 * (x * 1.0 / width - 0.5);
-	config.yaw = PI / 4 * (y * 1.0 / height - 0.5);
+	config.pitch = PI / 4 * (y * 1.0 / height - 0.5);
 }
 
 void mouseClick(int btn, int state, int x, int y)
 {
+	/* Smooth yaw with left/right mouse buttons */
 	if (btn == GLUT_LEFT_BUTTON)
 		if (state != GLUT_UP)
 			button |= 1;
@@ -230,22 +305,49 @@ void mouseClick(int btn, int state, int x, int y)
 			button |= 2;
 		else
 			button &= ~2;
+	/* Middle button to temporarily disable the optimiser */
+	if (btn == GLUT_MIDDLE_BUTTON)
+		optimise_solution = state == GLUT_UP;
 }
 
 void keyPress(unsigned char key, int x, int y)
 {
 	if (key == 'Q' || key == 'q' || key == 27)
 		exit(0);
+	if (key == 'R' || key == 'r')
+		model_rotation = !model_rotation;
 }
+
+void specialKeyPress(int key, int x, int y)
+{
+}
+
+const char help[] =
+	"zenity --info --text='"
+	"Stewart platform solver/optimiser demo\n"
+	"\n"
+	" * Move cursor in window to control pitch and roll\n"
+	"\n"
+	" * Use the left/right mouse buttons to control yaw\n"
+	"\n"
+	" * Hold down the middle button to temporarily disable the optimiser,\n"
+	"allowing you to see which struts (if any) are in impossible positions\n"
+	"\n"
+	" * Press 'R' to toggle the model rotation\n"
+	"\n"
+	" * Press 'Q' to quit the demo\n"
+	"'";
 
 int main(int argc, char** argv)
 {
+	system(help);
 	createWindow(argc, argv);
 	glutDisplayFunc(&renderScene);
 	glutPassiveMotionFunc(&mouseMove);
 	glutMotionFunc(&mouseMove);
 	glutMouseFunc(&mouseClick);
 	glutKeyboardFunc(&keyPress);
+	glutSpecialFunc(&specialKeyPress);
 	setCamera();
 	setLights();
 	glutMainLoop();

@@ -24,8 +24,8 @@ CONFIGURATION demo_configuration()
 	/* Objective: used by solve() to calculate motor angles */
 	config.platform_displacement = VECTOR::unitY() * config.strut_length *
 		cos((config.base_rx + config.base_ry - config.platform_rx - config.platform_ry) * 0.25 / config.strut_length);
-	config.yaw = 0;
 	config.pitch = 0;
+	config.yaw = 0;
 	config.roll = 0;
 
 	/* VISUAL ONLY */

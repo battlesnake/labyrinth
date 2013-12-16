@@ -65,6 +65,10 @@ public:
 
 /* Platform configuration objective */
 class CONFIGURATION {
+private:
+	void setParams(const float* const x);
+	void getParams(float* const x);
+	void gradient(const float* const x, float * const grad, const float delta = 0.01);
 public:
 
 	CONFIGURATION(int struts)
@@ -78,11 +82,13 @@ public:
 		delete [] s;
 	}
 
-	/* Platform centre displacement from base centre */
-	VECTOR platform_displacement;
+	/* pitch/yaw/roll/x/y/z must follow appear in that order in memory: */
 
 	/* Platform rotation relative to base plane */
-	float yaw = 0, pitch = 0, roll = 0;
+	float pitch = 0, yaw = 0, roll = 0;
+
+	/* Platform centre displacement from base centre */
+	VECTOR platform_displacement;
 
 	/* Number of struts */
 	int struts;
@@ -134,11 +140,22 @@ public:
 	{
 		return this->s[index];
 	}
-	
+
 	void configure();
 	void solve();
 	void solve(int strut);
 	float epsilon();
+	bool optimise(
+		const float pitch_freedom,
+		const float yaw_freedom,
+		const float roll_freedom,
+		const VECTOR displacement_freedom,
+		const float jumpscale = 0.1,
+		const int iterations = 100);
+	/* yaw/pitch/roll/x/y/z */
+	bool optimise(const float * const freedom,
+		const float jumpscale = 0.1,
+		const int iterations = 100);
 };
 
 CONFIGURATION demo_configuration();

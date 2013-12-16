@@ -39,6 +39,7 @@ OBJECTFILES= \
 	${OBJECTDIR}/demo.o \
 	${OBJECTDIR}/main.o \
 	${OBJECTDIR}/matrix.o \
+	${OBJECTDIR}/optimise.o \
 	${OBJECTDIR}/shapes.o \
 	${OBJECTDIR}/solve.o \
 	${OBJECTDIR}/vector.o
@@ -87,6 +88,11 @@ ${OBJECTDIR}/matrix.o: matrix.cpp
 	${MKDIR} -p ${OBJECTDIR}
 	${RM} $@.d
 	$(COMPILE.cc) -g -std=c++11 -MMD -MP -MF $@.d -o ${OBJECTDIR}/matrix.o matrix.cpp
+
+${OBJECTDIR}/optimise.o: optimise.cpp 
+	${MKDIR} -p ${OBJECTDIR}
+	${RM} $@.d
+	$(COMPILE.cc) -g -std=c++11 -MMD -MP -MF $@.d -o ${OBJECTDIR}/optimise.o optimise.cpp
 
 ${OBJECTDIR}/shapes.o: shapes.cpp 
 	${MKDIR} -p ${OBJECTDIR}

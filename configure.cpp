@@ -6,7 +6,7 @@
 
 void CONFIGURATION::configure()
 {
-	MATRIX platform_rotation = MATRIX::rotation(yaw, pitch, roll);
+	MATRIX platform_rotation = MATRIX::rotation(pitch, yaw, roll);
 	for (int i = 0; i < struts; i++) {
 		float theta = i * 2 * PI / struts;
 		/* Motor */

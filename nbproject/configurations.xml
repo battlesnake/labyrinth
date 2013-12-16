@@ -16,6 +16,7 @@
       <itemPath>demo.cpp</itemPath>
       <itemPath>main.cpp</itemPath>
       <itemPath>matrix.cpp</itemPath>
+      <itemPath>optimise.cpp</itemPath>
       <itemPath>shapes.cpp</itemPath>
       <itemPath>solve.cpp</itemPath>
       <itemPath>vector.cpp</itemPath>
@@ -66,6 +67,8 @@
       <item path="matrix.cpp" ex="false" tool="1" flavor2="0">
       </item>
       <item path="matrix.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="optimise.cpp" ex="false" tool="1" flavor2="0">
       </item>
       <item path="shapes.cpp" ex="false" tool="1" flavor2="0">
       </item>
@@ -119,6 +122,8 @@
       <item path="matrix.cpp" ex="false" tool="1" flavor2="0">
       </item>
       <item path="matrix.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="optimise.cpp" ex="false" tool="1" flavor2="0">
       </item>
       <item path="shapes.cpp" ex="false" tool="1" flavor2="0">
       </item>
