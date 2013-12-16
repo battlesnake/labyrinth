@@ -10,10 +10,10 @@
 #include <GL/glut.h>
 #include <math.h>
 #include <unistd.h> 
-#include "types.h"
-#include "matrix.h"
-#include "vector.h"
-#include "shapes.h"
+#include "stewart-platform/types.h"
+#include "stewart-platform/matrix.h"
+#include "stewart-platform/vector.h"
+#include "stewart-platform/shapes.h"
 
 using namespace std;
 

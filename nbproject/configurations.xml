@@ -4,22 +4,12 @@
     <logicalFolder name="HeaderFiles"
                    displayName="Header Files"
                    projectFiles="true">
-      <itemPath>matrix.h</itemPath>
-      <itemPath>shapes.h</itemPath>
-      <itemPath>types.h</itemPath>
-      <itemPath>vector.h</itemPath>
     </logicalFolder>
     <logicalFolder name="SourceFiles"
                    displayName="Source Files"
                    projectFiles="true">
-      <itemPath>configure.cpp</itemPath>
       <itemPath>demo.cpp</itemPath>
       <itemPath>main.cpp</itemPath>
-      <itemPath>matrix.cpp</itemPath>
-      <itemPath>optimise.cpp</itemPath>
-      <itemPath>shapes.cpp</itemPath>
-      <itemPath>solve.cpp</itemPath>
-      <itemPath>vector.cpp</itemPath>
     </logicalFolder>
     <logicalFolder name="TestFiles"
                    displayName="Test Files"
@@ -58,29 +48,9 @@
           </linkerLibItems>
         </linkerTool>
       </compileType>
-      <item path="configure.cpp" ex="false" tool="1" flavor2="0">
-      </item>
       <item path="demo.cpp" ex="false" tool="1" flavor2="0">
       </item>
       <item path="main.cpp" ex="false" tool="1" flavor2="0">
-      </item>
-      <item path="matrix.cpp" ex="false" tool="1" flavor2="0">
-      </item>
-      <item path="matrix.h" ex="false" tool="3" flavor2="0">
-      </item>
-      <item path="optimise.cpp" ex="false" tool="1" flavor2="0">
-      </item>
-      <item path="shapes.cpp" ex="false" tool="1" flavor2="0">
-      </item>
-      <item path="shapes.h" ex="false" tool="3" flavor2="0">
-      </item>
-      <item path="solve.cpp" ex="false" tool="1" flavor2="0">
-      </item>
-      <item path="types.h" ex="false" tool="3" flavor2="0">
-      </item>
-      <item path="vector.cpp" ex="false" tool="1" flavor2="0">
-      </item>
-      <item path="vector.h" ex="false" tool="3" flavor2="0">
       </item>
     </conf>
     <conf name="Release" type="1">
@@ -113,29 +83,9 @@
           </linkerLibItems>
         </linkerTool>
       </compileType>
-      <item path="configure.cpp" ex="false" tool="1" flavor2="0">
-      </item>
       <item path="demo.cpp" ex="false" tool="1" flavor2="0">
       </item>
       <item path="main.cpp" ex="false" tool="1" flavor2="0">
-      </item>
-      <item path="matrix.cpp" ex="false" tool="1" flavor2="0">
-      </item>
-      <item path="matrix.h" ex="false" tool="3" flavor2="0">
-      </item>
-      <item path="optimise.cpp" ex="false" tool="1" flavor2="0">
-      </item>
-      <item path="shapes.cpp" ex="false" tool="1" flavor2="0">
-      </item>
-      <item path="shapes.h" ex="false" tool="3" flavor2="0">
-      </item>
-      <item path="solve.cpp" ex="false" tool="1" flavor2="0">
-      </item>
-      <item path="types.h" ex="false" tool="3" flavor2="0">
-      </item>
-      <item path="vector.cpp" ex="false" tool="1" flavor2="0">
-      </item>
-      <item path="vector.h" ex="false" tool="3" flavor2="0">
       </item>
     </conf>
   </confs>

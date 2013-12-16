@@ -35,14 +35,8 @@ OBJECTDIR=${CND_BUILDDIR}/${CND_CONF}/${CND_PLATFORM}
 
 # Object Files
 OBJECTFILES= \
-	${OBJECTDIR}/configure.o \
 	${OBJECTDIR}/demo.o \
-	${OBJECTDIR}/main.o \
-	${OBJECTDIR}/matrix.o \
-	${OBJECTDIR}/optimise.o \
-	${OBJECTDIR}/shapes.o \
-	${OBJECTDIR}/solve.o \
-	${OBJECTDIR}/vector.o
+	${OBJECTDIR}/main.o
 
 
 # C Compiler Flags
@@ -69,45 +63,15 @@ ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/labyrinth: ${OBJECTFILES}
 	${MKDIR} -p ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}
 	${LINK.cc} -o ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/labyrinth ${OBJECTFILES} ${LDLIBSOPTIONS}
 
-${OBJECTDIR}/configure.o: configure.cpp 
-	${MKDIR} -p ${OBJECTDIR}
-	${RM} $@.d
-	$(COMPILE.cc) -g -std=c++11 -MMD -MP -MF $@.d -o ${OBJECTDIR}/configure.o configure.cpp
-
 ${OBJECTDIR}/demo.o: demo.cpp 
 	${MKDIR} -p ${OBJECTDIR}
-	${RM} $@.d
-	$(COMPILE.cc) -g -std=c++11 -MMD -MP -MF $@.d -o ${OBJECTDIR}/demo.o demo.cpp
+	${RM} "$@.d"
+	$(COMPILE.cc) -g -std=c++11 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/demo.o demo.cpp
 
 ${OBJECTDIR}/main.o: main.cpp 
 	${MKDIR} -p ${OBJECTDIR}
-	${RM} $@.d
-	$(COMPILE.cc) -g -std=c++11 -MMD -MP -MF $@.d -o ${OBJECTDIR}/main.o main.cpp
-
-${OBJECTDIR}/matrix.o: matrix.cpp 
-	${MKDIR} -p ${OBJECTDIR}
-	${RM} $@.d
-	$(COMPILE.cc) -g -std=c++11 -MMD -MP -MF $@.d -o ${OBJECTDIR}/matrix.o matrix.cpp
-
-${OBJECTDIR}/optimise.o: optimise.cpp 
-	${MKDIR} -p ${OBJECTDIR}
-	${RM} $@.d
-	$(COMPILE.cc) -g -std=c++11 -MMD -MP -MF $@.d -o ${OBJECTDIR}/optimise.o optimise.cpp
-
-${OBJECTDIR}/shapes.o: shapes.cpp 
-	${MKDIR} -p ${OBJECTDIR}
-	${RM} $@.d
-	$(COMPILE.cc) -g -std=c++11 -MMD -MP -MF $@.d -o ${OBJECTDIR}/shapes.o shapes.cpp
-
-${OBJECTDIR}/solve.o: solve.cpp 
-	${MKDIR} -p ${OBJECTDIR}
-	${RM} $@.d
-	$(COMPILE.cc) -g -std=c++11 -MMD -MP -MF $@.d -o ${OBJECTDIR}/solve.o solve.cpp
-
-${OBJECTDIR}/vector.o: vector.cpp 
-	${MKDIR} -p ${OBJECTDIR}
-	${RM} $@.d
-	$(COMPILE.cc) -g -std=c++11 -MMD -MP -MF $@.d -o ${OBJECTDIR}/vector.o vector.cpp
+	${RM} "$@.d"
+	$(COMPILE.cc) -g -std=c++11 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/main.o main.cpp
 
 # Subprojects
 .build-subprojects:

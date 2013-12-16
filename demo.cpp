@@ -1,5 +1,5 @@
-#include "types.h"
-#include "vector.h"
+#include "stewart-platform/types.h"
+#include "stewart-platform/vector.h"
 
 /* Example configuration */
 CONFIGURATION demo_configuration()
