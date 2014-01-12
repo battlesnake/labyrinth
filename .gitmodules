@@ -1,3 +1,6 @@
 [submodule "stewart-platform"]
 	path = stewart-platform
 	url = git@github.com:battlesnake/stewart-platform.git
+[submodule "maestro"]
+	path = maestro
+	url = git@github.com:battlesnake/maestro-cpp.git

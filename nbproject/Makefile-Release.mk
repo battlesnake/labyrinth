@@ -35,8 +35,16 @@ OBJECTDIR=${CND_BUILDDIR}/${CND_CONF}/${CND_PLATFORM}
 
 # Object Files
 OBJECTFILES= \
-	${OBJECTDIR}/demo.o \
-	${OBJECTDIR}/main.o
+	${OBJECTDIR}/maestro/maestro.o \
+	${OBJECTDIR}/main.o \
+	${OBJECTDIR}/stewart-platform/configure.o \
+	${OBJECTDIR}/stewart-platform/demo.o \
+	${OBJECTDIR}/stewart-platform/matrix.o \
+	${OBJECTDIR}/stewart-platform/optimise.o \
+	${OBJECTDIR}/stewart-platform/parse.o \
+	${OBJECTDIR}/stewart-platform/shapes.o \
+	${OBJECTDIR}/stewart-platform/solve.o \
+	${OBJECTDIR}/stewart-platform/vector.o
 
 
 # C Compiler Flags
@@ -63,15 +71,55 @@ ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/labyrinth: ${OBJECTFILES}
 	${MKDIR} -p ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}
 	${LINK.cc} -o ${CND_DISTDIR}/${CND_CONF}/${CND_PLATFORM}/labyrinth ${OBJECTFILES} ${LDLIBSOPTIONS}
 
-${OBJECTDIR}/demo.o: demo.cpp 
-	${MKDIR} -p ${OBJECTDIR}
+${OBJECTDIR}/maestro/maestro.o: maestro/maestro.cpp 
+	${MKDIR} -p ${OBJECTDIR}/maestro
 	${RM} "$@.d"
-	$(COMPILE.cc) -O3 -std=c++11 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/demo.o demo.cpp
+	$(COMPILE.cc) -O3 -std=c++11 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/maestro/maestro.o maestro/maestro.cpp
 
 ${OBJECTDIR}/main.o: main.cpp 
 	${MKDIR} -p ${OBJECTDIR}
 	${RM} "$@.d"
 	$(COMPILE.cc) -O3 -std=c++11 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/main.o main.cpp
+
+${OBJECTDIR}/stewart-platform/configure.o: stewart-platform/configure.cpp 
+	${MKDIR} -p ${OBJECTDIR}/stewart-platform
+	${RM} "$@.d"
+	$(COMPILE.cc) -O3 -std=c++11 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/stewart-platform/configure.o stewart-platform/configure.cpp
+
+${OBJECTDIR}/stewart-platform/demo.o: stewart-platform/demo.cpp 
+	${MKDIR} -p ${OBJECTDIR}/stewart-platform
+	${RM} "$@.d"
+	$(COMPILE.cc) -O3 -std=c++11 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/stewart-platform/demo.o stewart-platform/demo.cpp
+
+${OBJECTDIR}/stewart-platform/matrix.o: stewart-platform/matrix.cpp 
+	${MKDIR} -p ${OBJECTDIR}/stewart-platform
+	${RM} "$@.d"
+	$(COMPILE.cc) -O3 -std=c++11 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/stewart-platform/matrix.o stewart-platform/matrix.cpp
+
+${OBJECTDIR}/stewart-platform/optimise.o: stewart-platform/optimise.cpp 
+	${MKDIR} -p ${OBJECTDIR}/stewart-platform
+	${RM} "$@.d"
+	$(COMPILE.cc) -O3 -std=c++11 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/stewart-platform/optimise.o stewart-platform/optimise.cpp
+
+${OBJECTDIR}/stewart-platform/parse.o: stewart-platform/parse.cpp 
+	${MKDIR} -p ${OBJECTDIR}/stewart-platform
+	${RM} "$@.d"
+	$(COMPILE.cc) -O3 -std=c++11 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/stewart-platform/parse.o stewart-platform/parse.cpp
+
+${OBJECTDIR}/stewart-platform/shapes.o: stewart-platform/shapes.cpp 
+	${MKDIR} -p ${OBJECTDIR}/stewart-platform
+	${RM} "$@.d"
+	$(COMPILE.cc) -O3 -std=c++11 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/stewart-platform/shapes.o stewart-platform/shapes.cpp
+
+${OBJECTDIR}/stewart-platform/solve.o: stewart-platform/solve.cpp 
+	${MKDIR} -p ${OBJECTDIR}/stewart-platform
+	${RM} "$@.d"
+	$(COMPILE.cc) -O3 -std=c++11 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/stewart-platform/solve.o stewart-platform/solve.cpp
+
+${OBJECTDIR}/stewart-platform/vector.o: stewart-platform/vector.cpp 
+	${MKDIR} -p ${OBJECTDIR}/stewart-platform
+	${RM} "$@.d"
+	$(COMPILE.cc) -O3 -std=c++11 -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/stewart-platform/vector.o stewart-platform/vector.cpp
 
 # Subprojects
 .build-subprojects:

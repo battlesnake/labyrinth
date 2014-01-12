@@ -8,7 +8,27 @@
     <logicalFolder name="SourceFiles"
                    displayName="Source Files"
                    projectFiles="true">
-      <itemPath>demo.cpp</itemPath>
+      <logicalFolder name="maestro" displayName="maestro" projectFiles="true">
+        <itemPath>maestro/maestro.cpp</itemPath>
+        <itemPath>maestro/maestro.h</itemPath>
+      </logicalFolder>
+      <logicalFolder name="stewart-platform"
+                     displayName="stewart-platform"
+                     projectFiles="true">
+        <itemPath>stewart-platform/configure.cpp</itemPath>
+        <itemPath>stewart-platform/demo.cpp</itemPath>
+        <itemPath>stewart-platform/matrix.cpp</itemPath>
+        <itemPath>stewart-platform/matrix.h</itemPath>
+        <itemPath>stewart-platform/optimise.cpp</itemPath>
+        <itemPath>stewart-platform/parse.cpp</itemPath>
+        <itemPath>stewart-platform/parse.h</itemPath>
+        <itemPath>stewart-platform/shapes.cpp</itemPath>
+        <itemPath>stewart-platform/shapes.h</itemPath>
+        <itemPath>stewart-platform/solve.cpp</itemPath>
+        <itemPath>stewart-platform/types.h</itemPath>
+        <itemPath>stewart-platform/vector.cpp</itemPath>
+        <itemPath>stewart-platform/vector.h</itemPath>
+      </logicalFolder>
       <itemPath>main.cpp</itemPath>
     </logicalFolder>
     <logicalFolder name="TestFiles"
@@ -23,6 +43,10 @@
       <itemPath>Makefile</itemPath>
     </logicalFolder>
   </logicalFolder>
+  <sourceRootList>
+    <Elem>stewart-platform</Elem>
+    <Elem>maestro</Elem>
+  </sourceRootList>
   <projectmakefile>Makefile</projectmakefile>
   <confs>
     <conf name="Debug" type="1">
@@ -48,9 +72,37 @@
           </linkerLibItems>
         </linkerTool>
       </compileType>
-      <item path="demo.cpp" ex="false" tool="1" flavor2="0">
+      <item path="maestro/maestro.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="maestro/maestro.h" ex="false" tool="3" flavor2="0">
       </item>
       <item path="main.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="stewart-platform/configure.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="stewart-platform/demo.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="stewart-platform/matrix.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="stewart-platform/matrix.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="stewart-platform/optimise.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="stewart-platform/parse.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="stewart-platform/parse.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="stewart-platform/shapes.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="stewart-platform/shapes.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="stewart-platform/solve.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="stewart-platform/types.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="stewart-platform/vector.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="stewart-platform/vector.h" ex="false" tool="3" flavor2="0">
       </item>
     </conf>
     <conf name="Release" type="1">
@@ -83,9 +135,37 @@
           </linkerLibItems>
         </linkerTool>
       </compileType>
-      <item path="demo.cpp" ex="false" tool="1" flavor2="0">
+      <item path="maestro/maestro.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="maestro/maestro.h" ex="false" tool="3" flavor2="0">
       </item>
       <item path="main.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="stewart-platform/configure.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="stewart-platform/demo.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="stewart-platform/matrix.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="stewart-platform/matrix.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="stewart-platform/optimise.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="stewart-platform/parse.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="stewart-platform/parse.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="stewart-platform/shapes.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="stewart-platform/shapes.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="stewart-platform/solve.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="stewart-platform/types.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="stewart-platform/vector.cpp" ex="false" tool="1" flavor2="0">
+      </item>
+      <item path="stewart-platform/vector.h" ex="false" tool="3" flavor2="0">
       </item>
     </conf>
   </confs>

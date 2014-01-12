@@ -14,6 +14,7 @@
 #include "stewart-platform/matrix.h"
 #include "stewart-platform/vector.h"
 #include "stewart-platform/shapes.h"
+#include "maestro/maestro.h"
 
 using namespace std;
 
@@ -64,7 +65,70 @@ CONFIGURATION config = demo_configuration();
 /******************************************************************************/
 /******************************************************************************/
 /******************************************************************************/
+
 /******************************************************************************/
+
+MAESTRO* maestro;
+bool maestro_update;
+
+void maestroReset()
+{
+	if (!maestro) {
+		return;
+	}
+	for (int i = 0; i < 6; i++) {
+		(*maestro)[i].setAP(0);
+	}
+}
+
+void maestroDisconnect()
+{
+	if (!maestro) {
+		return;
+	}
+	maestroReset();
+	delete maestro;
+	maestro = 0;
+}
+
+void maestroError(const char * const err)
+{
+	char cmd[4096];
+	sprintf(cmd, "zenity --info --text=\"Maestro error:\n%s\"", err);
+	system(cmd);
+}
+
+void maestroConnect()
+{
+	if (!maestro) {
+		try {
+			maestro = new MAESTRO(6);
+		}
+		catch (const char * const err) {
+			maestroError(err);
+			return;
+		}
+		atexit(&maestroDisconnect);
+	}
+}
+
+void maestroConfigure()
+{
+	if (!maestro) {
+		return;
+	}
+	try {
+		for (int i = 0; i < 6; i++) {
+			float pc = asin(sin(config.s[i].motor_angle)) * 50.0 / PI + 50;
+			pc = (pc < 0) ? 0 : (pc > 100) ? 100 : pc;
+			(*maestro)[i].setAP(pc);
+		}
+	}
+	catch (const char * const err) {
+		maestroError(err);
+		return;
+	}
+}
 
 /* Viewport */
 const int width = 800, height = 800;
@@ -108,10 +172,12 @@ void renderScene()
 	/* Extra delay or optimisation to keep frame rate low */
 	if (dt < dt_target - 1e-3) {
 		delay_extra = (dt_target - dt) * CLOCKS_PER_SEC;
-	} else if (dt < dt_target + 3e-3) {
+	}
+	else if (dt < dt_target + 3e-3) {
 		delay_extra *= 99;
 		delay_extra /= 100;
-	} else {
+	}
+	else {
 		delay_extra *= 90;
 		delay_extra /= 100;
 	}
@@ -138,7 +204,8 @@ void renderScene()
 		const float err2 = config.epsilon();
 		/* Display epsilons */
 		sprintf(title, "Epsilon = %e, Optimised = %e, Optimisation cycles = %d, Frame rate = %.0f", error, err2, opt_iterations, 1 / dt);
-	} else {
+	}
+	else {
 		/* Display epsilon */
 		sprintf(title, "Epsilon = %e, Frame rate = %.0f", error, 1 / dt);
 	}
@@ -158,7 +225,10 @@ void renderScene()
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
 	glTranslatef(0, -133.212, -1000);
-	glRotatef(model_theta, 0, 1, 0);
+
+	if (!maestro_update) {
+		glRotatef(model_theta, 0, 1, 0);
+	}
 
 	/* Base */
 	glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE, VECTOR(0.8, 0.7, 0.1));
@@ -219,6 +289,11 @@ void renderScene()
 		yaw_omega -= dt * 50;
 	config.yaw += yaw_omega * dt;
 	yaw_omega *= pow(0.01, dt);
+
+	/* Update maestro */
+	if (maestro_update) {
+		maestroConfigure();
+	}
 
 	/* Delay to reduce frame rate */
 	if (delayed_target > clock())
@@ -312,10 +387,19 @@ void mouseClick(int btn, int state, int x, int y)
 
 void keyPress(unsigned char key, int x, int y)
 {
-	if (key == 'Q' || key == 'q' || key == 27)
+	if (key > 'Z')
+		key -= 'a' - 'A';
+	if (key == 'Q' || key == 27)
 		exit(0);
-	if (key == 'R' || key == 'r')
+	if (key == 'R')
 		model_rotation = !model_rotation;
+	if (key == 'D') {
+		maestroConnect();
+		maestro_update = !maestro_update;
+		if (!maestro_update) {
+			maestroReset();
+		}
+	}
 }
 
 void specialKeyPress(int key, int x, int y)
@@ -323,7 +407,7 @@ void specialKeyPress(int key, int x, int y)
 }
 
 const char help[] =
-	"zenity --info --text='"
+	"zenity --info --no-wrap --text='"
 	"Stewart platform solver/optimiser demo\n"
 	"\n"
 	" * Move cursor in window to control pitch and roll\n"
@@ -334,6 +418,9 @@ const char help[] =
 	"allowing you to see which struts (if any) are in impossible positions\n"
 	"\n"
 	" * Press 'R' to toggle the model rotation\n"
+	"\n"
+	" * Press 'D' to toggle sending of the configuration to a connected Maestro-driven platform\n"
+	"   NOTE: The Maestro must be in \"USB\" mode in order for this feature to work\n"
 	"\n"
 	" * Press 'Q' to quit the demo\n"
 	"'";
