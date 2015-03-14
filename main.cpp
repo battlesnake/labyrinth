@@ -3,13 +3,16 @@
  * Author: Mark K Cowan, mark@battlesnake.co.uk, hackology.co.uk
  */
 
-#include <time.h>
+#include <chrono>
+#include <thread>
 #include <future>
+#include <ctime>
 #include <GL/gl.h>
 #include <GL/glu.h>
 #include <GL/glut.h>
 #include <math.h>
-#include <unistd.h> 
+#include <unistd.h>
+#include <stdio.h>
 #include "stewart-platform/types.h"
 #include "stewart-platform/matrix.h"
 #include "stewart-platform/vector.h"
@@ -17,6 +20,9 @@
 #include "maestro/maestro.h"
 
 using namespace std;
+using namespace std::chrono;
+
+#define TARGET_FRAME_RATE 60
 
 /*
  * Demo configuration.  Look in types.h:CONFIGURATION and demo.cpp for details
@@ -94,7 +100,7 @@ void maestroDisconnect()
 void maestroError(const char * const err)
 {
 	char cmd[4096];
-	sprintf(cmd, "zenity --info --text=\"Maestro error:\n%s\"", err);
+	snprintf(cmd, 4095, "zenity --info --text=\"Maestro error:\n%s\"", err);
 	system(cmd);
 }
 
@@ -147,76 +153,22 @@ bool optimise_solution = true;
 bool model_rotation = true;
 float model_theta = 0;
 
-/* Target frame rate*/
-const float fps_target = 60;
-const float dt_target = 1.0 / fps_target;
-
-/* Frame times for moving average rate calculation */
-#define FRAME_RATE_MOVING_WINDOW_SIZE 6
-clock_t t_frames[FRAME_RATE_MOVING_WINDOW_SIZE];
-int t_frame = 0;
-
-/* Extra delay to reduce frame rate */
-clock_t delay_extra = 0;
-
-void renderScene()
+int optimiseSolution(const chrono::steady_clock::time_point t_deadline)
 {
-	/* Timing for animation and rate limiting */
-	const clock_t ticks = clock();
-	const clock_t last_ticks = t_frames[t_frame];
-	t_frames[t_frame] = ticks;
-	t_frame = (t_frame + 1) % FRAME_RATE_MOVING_WINDOW_SIZE;
-	double dt = (ticks - last_ticks) / (1.0 * CLOCKS_PER_SEC * FRAME_RATE_MOVING_WINDOW_SIZE);
+	const float freedoms[] = {0.05, 0.001, 0.05, 1, 1, 1};
+	int iterations = 0;
+	const int iterations_per_cycle = 30;
+	do {
+		if (config.optimise(freedoms, 0.05, iterations_per_cycle)) {
+			break;
+		}
+		iterations += iterations_per_cycle;
+	} while (chrono::steady_clock::now() < t_deadline);
+	return iterations;
+}
 
-	long delayed_target = 0;
-	/* Extra delay or optimisation to keep frame rate low */
-	if (dt < dt_target - 1e-3) {
-		delay_extra = (dt_target - dt) * CLOCKS_PER_SEC;
-	}
-	else if (dt < dt_target + 3e-3) {
-		delay_extra *= 99;
-		delay_extra /= 100;
-	}
-	else {
-		delay_extra *= 90;
-		delay_extra /= 100;
-	}
-	delayed_target = delay_extra + ticks;
-
-	/* Window title */
-	char title[60];
-
-	/* Motor angles */
-	config.solve();
-	config.configure();
-	const float error = config.epsilon();
-
-	if (optimise_solution) {
-		/* Optimise */
-		const float freedoms[] = {0.05, 0.001, 0.05, 1, 1, 1};
-		int opt_iterations = 0;
-		const int iterations_per_cycle = 10;
-		do {
-			if (config.optimise(freedoms, 0.05, iterations_per_cycle))
-				break;
-			opt_iterations += iterations_per_cycle;
-		} while (delayed_target && (clock() < delayed_target + ticks));
-		const float err2 = config.epsilon();
-		/* Display epsilons */
-		sprintf(title, "Epsilon = %e, Optimised = %e, Optimisation cycles = %d, Frame rate = %.0f", error, err2, opt_iterations, 1 / dt);
-	}
-	else {
-		/* Display epsilon */
-		sprintf(title, "Epsilon = %e, Frame rate = %.0f", error, 1 / dt);
-	}
-
-	/* Set window title */
-	glutSetWindowTitle(title);
-
-	/* Rotation */
-	if (model_rotation)
-		model_theta += 45.0 * dt;
-
+void initFrame()
+{
 	/* Initialise buffers */
 	glClearColor(1, 1, 1, 1);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -225,12 +177,10 @@ void renderScene()
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
 	glTranslatef(0, -133.212, -1000);
+}
 
-	if (!maestro_update) {
-		glRotatef(model_theta, 0, 1, 0);
-	}
-
-	/* Base */
+void renderBase()
+{
 	glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE, VECTOR(0.8, 0.7, 0.1));
 	glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, VECTOR(1, 1, 1));
 	glMateriali(GL_FRONT_AND_BACK, GL_SHININESS, 90);
@@ -238,8 +188,10 @@ void renderScene()
 		config.base[0], config.base[1],
 		config.base_polygon == CONFIGURATION::PLATFORM_SHAPE::POLYEDGE ? PI / config.struts : 0,
 		config.base_polygon == CONFIGURATION::PLATFORM_SHAPE::ELLIPSE ? 60 : config.struts);
+}
 
-	/* Platform */
+void renderPlatform()
+{
 	glPushMatrix();
 	glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE, VECTOR(0.8, 0.4, 0.3));
 	glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, VECTOR(1, 1, 1));
@@ -251,57 +203,118 @@ void renderScene()
 		config.platform_polygon == CONFIGURATION::PLATFORM_SHAPE::POLYEDGE ? PI / config.struts : 0,
 		config.platform_polygon == CONFIGURATION::PLATFORM_SHAPE::ELLIPSE ? 60 : config.struts);
 	glPopMatrix();
+}
 
-	/* Struts and wheels */
+void renderStrutAndWheel(const int i)
+{
+	/* Strut */
+	glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE, VECTOR(0.2, 0.4, 0.7));
+	glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, VECTOR(1, 1, 1));
+	glMateriali(GL_FRONT_AND_BACK, GL_SHININESS, 10);
+	if (config[i].error != 0) {
+		glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, VECTOR(1, 0, 0));
+	}
+	strut(
+		config[i].p[0], config[i].p[1],
+		config[i].base_halfwidth, config[i].base_halfdepth,
+		config[i].platform_halfwidth, config[i].platform_halfdepth);
+	/* Wheel */
+	glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE, VECTOR(0.2, 0.7, 0.2));
+	glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, VECTOR(1, 1, 1));
+	glMateriali(GL_FRONT_AND_BACK, GL_SHININESS, 80);
+	MATRIX m = MATRIX::rotation(config[i].normal, -config[i].motor_angle);
+	VECTOR u = m * config[i].tangent;
+	VECTOR v = m * VECTOR(0, 0.5, 0);
+	cylinder(config[i].motor_offset, config[i].motor_offset + config[i].normal * config.wheel_thickness, u * config.strut_arm, v * config.strut_arm);
+}
+
+void updateYaw(const float dt)
+{
+	if (button & 1) {
+		yaw_omega += dt * 50;
+	}
+	if (button & 2) {
+		yaw_omega -= dt * 50;
+	}
+	config.yaw += yaw_omega * dt;
+	yaw_omega *= pow(0.01, dt);
+}
+
+#define WINDOW_TITLE_MAX_LEN 120
+void renderScene(const float dt, const chrono::steady_clock::time_point t_deadline)
+{
+	/* Motor angles */
+	config.solve();
+	config.configure();
+	const float error = config.epsilon();
+
+	/* Window title and optimisation */
+	char title[WINDOW_TITLE_MAX_LEN + 1];
+	if (optimise_solution) {
+		int iterations = optimiseSolution(t_deadline);
+		snprintf(title, WINDOW_TITLE_MAX_LEN, "Epsilon = %e, Optimised = %e, Optimisation cycles = %d, Frame rate = %.0f", error, config.epsilon(), iterations, 1 / dt);
+	} else {
+		snprintf(title, WINDOW_TITLE_MAX_LEN, "Epsilon = %e, Frame rate = %.0f", error, 1 / dt);
+	}
+
+	glutSetWindowTitle(title);
+
+	if (model_rotation) {
+		model_theta += 45.0 * dt;
+	}
+
+	initFrame();
+
+	if (!maestro_update) {
+		glRotatef(model_theta, 0, 1, 0);
+	}
+
+	renderBase();
+	renderPlatform();
+
 	for (int i = 0; i < config.struts; i++) {
-		/* Strut */
-		glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE, VECTOR(0.2, 0.4, 0.7));
-		glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, VECTOR(1, 1, 1));
-		glMateriali(GL_FRONT_AND_BACK, GL_SHININESS, 10);
-		if (config[i].error != 0)
-			glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, VECTOR(1, 0, 0));
-		strut(
-			config[i].p[0], config[i].p[1],
-			config[i].base_halfwidth, config[i].base_halfdepth,
-			config[i].platform_halfwidth, config[i].platform_halfdepth);
-		/* Wheel */
-		glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE, VECTOR(0.2, 0.7, 0.2));
-		glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, VECTOR(1, 1, 1));
-		glMateriali(GL_FRONT_AND_BACK, GL_SHININESS, 80);
-		MATRIX m = MATRIX::rotation(config[i].normal, -config[i].motor_angle);
-		VECTOR u = m * config[i].tangent;
-		VECTOR v = m * VECTOR(0, 0.5, 0);
-		cylinder(config[i].motor_offset, config[i].motor_offset + config[i].normal * config.wheel_thickness, u * config.strut_arm, v * config.strut_arm);
+		renderStrutAndWheel(i);
 	}
 
 	/* Flip buffers */
 	glutSwapBuffers();
 
 	/* Ensure we keep updating */
-	std::async(std::launch::async, [ = ](){
+	std::async(std::launch::async, [=](){
 		glutPostRedisplay();
 	});
 
 	/* Yaw mechanics */
-	if (button & 1)
-		yaw_omega += dt * 50;
-	if (button & 2)
-		yaw_omega -= dt * 50;
-	config.yaw += yaw_omega * dt;
-	yaw_omega *= pow(0.01, dt);
+	updateYaw(dt);
 
 	/* Update maestro */
 	if (maestro_update) {
 		maestroConfigure();
 	}
 
-	/* Delay to reduce frame rate */
-	if (delayed_target > clock())
-		usleep((1000000 * (delayed_target - clock())) / CLOCKS_PER_SEC);
-	while (clock() < delayed_target) {
+}
 
-	}
+void throttledRenderScene()
+{
+	/* Duration of a frame */
+	typedef duration<int, std::ratio<1, TARGET_FRAME_RATE>> frame_t;
+	const auto t_frame_duration = duration_cast<nanoseconds>(frame_t(1));
 
+	/* Time of previous frame */
+	static auto t_prev = steady_clock::now();
+
+	/* Timing for animation and rate limiting */
+	const auto t_start = steady_clock::now();
+	const auto t_end = t_start + t_frame_duration;
+	const auto t_prev_duration = t_start - t_prev;
+	t_prev = t_start;
+	const float dt = duration_cast<nanoseconds>(t_prev_duration).count() * 1e-9;
+
+	/* Call render */
+	renderScene(dt, t_end);
+
+	/* Delay to limit frame rate */
+	this_thread::sleep_until(t_end);
 }
 
 void setLights()
@@ -370,16 +383,22 @@ void mouseMove(int x, int y)
 void mouseClick(int btn, int state, int x, int y)
 {
 	/* Smooth yaw with left/right mouse buttons */
-	if (btn == GLUT_LEFT_BUTTON)
-		if (state != GLUT_UP)
+	if (btn == GLUT_LEFT_BUTTON) {
+		if (state != GLUT_UP) {
 			button |= 1;
-		else
+		} else {
 			button &= ~1;
-	if (btn == GLUT_RIGHT_BUTTON)
-		if (state != GLUT_UP)
+		}
+	}
+
+	if (btn == GLUT_RIGHT_BUTTON) {
+		if (state != GLUT_UP) {
 			button |= 2;
-		else
+		} else {
 			button &= ~2;
+		}
+	}
+
 	/* Middle button to temporarily disable the optimiser */
 	if (btn == GLUT_MIDDLE_BUTTON)
 		optimise_solution = state == GLUT_UP;
@@ -387,13 +406,17 @@ void mouseClick(int btn, int state, int x, int y)
 
 void keyPress(unsigned char key, int x, int y)
 {
-	if (key > 'Z')
+	if (key > 'Z') {
 		key -= 'a' - 'A';
-	if (key == 'Q' || key == 27)
+	}
+	switch (key) {
+	case 'Q':
+	case 27:
 		exit(0);
-	if (key == 'R')
+	case 'R':
 		model_rotation = !model_rotation;
-	if (key == 'D') {
+		break;
+	case 'D':
 		maestroConnect();
 		maestro_update = !maestro_update;
 		if (!maestro_update) {
@@ -429,7 +452,7 @@ int main(int argc, char** argv)
 {
 	system(help);
 	createWindow(argc, argv);
-	glutDisplayFunc(&renderScene);
+	glutDisplayFunc(&throttledRenderScene);
 	glutPassiveMotionFunc(&mouseMove);
 	glutMotionFunc(&mouseMove);
 	glutMouseFunc(&mouseClick);
